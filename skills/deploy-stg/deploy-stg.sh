@@ -28,14 +28,34 @@ crumb() {
 
 trigger() {
   # Defaults: every service on main. Any KEY=VALUE arg overrides a single ref.
-  declare -A P=( [PIQK_APP_REF]=main [CRM_ADMIN_REF]=main [CRM_SERVICE_REF]=main
-                 [CRYPTO_SERVICE_REF]=main [PIQK_SERVER_REF]=main [CONTINUE_ON_ERROR]=true )
-  for kv in "$@"; do P[${kv%%=*}]="${kv#*=}"; done
-  local data=()
-  for k in "${!P[@]}"; do data+=(--data-urlencode "${k}=${P[$k]}"); done
+  # No associative arrays: macOS ships bash 3.2, which lacks `declare -A`.
+  # Plain vars + an indexed data array keep this portable.
+  local PIQK_APP_REF=main CRM_ADMIN_REF=main CRM_SERVICE_REF=main
+  local CRYPTO_SERVICE_REF=main PIQK_SERVER_REF=main CONTINUE_ON_ERROR=true
+  for kv in "$@"; do
+    case "${kv%%=*}" in
+      PIQK_APP_REF)      PIQK_APP_REF="${kv#*=}";;
+      CRM_ADMIN_REF)     CRM_ADMIN_REF="${kv#*=}";;
+      CRM_SERVICE_REF)   CRM_SERVICE_REF="${kv#*=}";;
+      CRYPTO_SERVICE_REF) CRYPTO_SERVICE_REF="${kv#*=}";;
+      PIQK_SERVER_REF)   PIQK_SERVER_REF="${kv#*=}";;
+      CONTINUE_ON_ERROR) CONTINUE_ON_ERROR="${kv#*=}";;
+      *) echo "WARN: ignoring unknown key '${kv%%=*}'" >&2;;
+    esac
+  done
+
+  local data=(
+    --data-urlencode "PIQK_APP_REF=${PIQK_APP_REF}"
+    --data-urlencode "CRM_ADMIN_REF=${CRM_ADMIN_REF}"
+    --data-urlencode "CRM_SERVICE_REF=${CRM_SERVICE_REF}"
+    --data-urlencode "CRYPTO_SERVICE_REF=${CRYPTO_SERVICE_REF}"
+    --data-urlencode "PIQK_SERVER_REF=${PIQK_SERVER_REF}"
+    --data-urlencode "CONTINUE_ON_ERROR=${CONTINUE_ON_ERROR}"
+  )
 
   echo "Triggering deploy-all with:" >&2
-  for k in "${!P[@]}"; do printf '  %s=%s\n' "$k" "${P[$k]}" >&2; done
+  printf '  PIQK_APP_REF=%s\n  CRM_ADMIN_REF=%s\n  CRM_SERVICE_REF=%s\n  CRYPTO_SERVICE_REF=%s\n  PIQK_SERVER_REF=%s\n  CONTINUE_ON_ERROR=%s\n' \
+    "$PIQK_APP_REF" "$CRM_ADMIN_REF" "$CRM_SERVICE_REF" "$CRYPTO_SERVICE_REF" "$PIQK_SERVER_REF" "$CONTINUE_ON_ERROR" >&2
 
   local loc
   loc=$(curl -fsS -D - -o /dev/null --user "$AUTH" -H "$(crumb)" -X POST \

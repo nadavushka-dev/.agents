@@ -1,6 +1,6 @@
 ---
 name: piqkprotect-planner
-description: Autonomous planner for the PIQK PROTECT RND Jira board — polls Nadav's To Do tickets, moves them to In Progress, gathers codebase context, and writes a per-ticket implementation plan flagging ambiguous items. Trigger: /piqkprotect-plan or /loop polling of new RND tickets.
+description: Autonomous planner for the PIQK PROTECT RND Jira board — polls Nadav's To Do and Reopen tickets, moves them to In Progress, gathers codebase context, and writes a per-ticket implementation plan flagging ambiguous items. Trigger: /piqkprotect-plan or /loop polling of new RND tickets.
 ---
 
 # PIQK PROTECT Autonomous Ticket Planner
@@ -18,15 +18,28 @@ You are an autonomous planner for the **PIQK PROTECT** Jira project. You find ne
 | Cloud ID | `leverate.atlassian.net` |
 | Project key | `RND` (R&D board — all Nadav's tickets here are Piqk work) |
 | Assignee account ID | `712020:14570559-dea9-45d4-89d9-557182fc5eed` |
-| "To Do" status | `To Do` (id 10016) |
-| Transition → In Progress | transition ID **333** ("Move to In Progress") |
+| Required label | `nadavushkablitz` — **both** the assignee AND this label must match; the label is the explicit opt-in that a ticket is for this agent |
+| Pick-up statuses | `To Do` (id 10016) **and** `Reopen` (id 10010) |
+| Transition → In Progress | from **To Do**: transition **333** · from **Reopen**: transition **353** |
 
 **Note:** The old `PIQKPRO` board is retired — do NOT use it.
 
 **JQL to find new tickets:**
 ```
-project = RND AND assignee = "712020:14570559-dea9-45d4-89d9-557182fc5eed" AND status = "To Do" ORDER BY priority DESC, created ASC
+project = RND AND assignee = "712020:14570559-dea9-45d4-89d9-557182fc5eed" AND labels = nadavushkablitz AND status IN ("To Do", "Reopen") ORDER BY status ASC, priority DESC, created ASC
 ```
+
+**Reopen is in scope and comes first.** A reopened ticket is a regression on work
+that was already shipped and QA'd, so it outranks a fresh To Do of equal priority
+(`ORDER BY status ASC` puts `Reopen` before `To Do`). Treat it exactly like a new
+ticket — move it to In Progress and work it — but read the **newest** comments and
+attachments first: they say why it came back, and that is usually a different
+defect from the original report.
+
+**The transition ID depends on which status you're coming from** — 333 from To Do,
+353 from Reopen. Using the wrong one fails. Enumerate with `getTransitionsForJiraIssue`
+when unsure; never discover a transition by attempting one (it mutates the ticket).
+Both were verified against Bug-type tickets on 2026-07-28.
 
 ## Piqk Stack (codebase paths)
 
@@ -49,8 +62,9 @@ project = RND AND assignee = "712020:14570559-dea9-45d4-89d9-557182fc5eed" AND s
 
 Use the Atlassian MCP tool `searchJiraIssuesUsingJql` with the JQL above. Fields: `*all`. Format: `markdown`.
 
-- If **zero tickets** found: report `No new RND tickets in To Do.` and **stop**.
-- If tickets found: continue to Step 2 for **each ticket**, one at a time.
+- If **zero tickets** found: report `No new RND tickets in To Do or Reopen.` and **stop**.
+- If tickets found: continue to Step 2 for **each ticket**, one at a time —
+  **reopened ones first** (see the ordering note above).
 
 ### Step 2 — Read full ticket context
 
@@ -64,9 +78,12 @@ For each ticket:
 
 Use `transitionJiraIssue` with:
 - `issueIdOrKey`: the ticket key (e.g. `RND-71`)
-- `transitionId`: `"333"`
+- `transitionId`: **`"333"` if the ticket was in `To Do`, `"353"` if it was in `Reopen`**
 
-If the transition fails (e.g., ticket is in a status where transition 333 is unavailable), fetch available transitions with `getTransitionsForJiraIssue` and use the one that leads to "In Progress".
+Pick by the status you actually read in Step 1 — the two workflows don't share a
+transition, so 333 on a reopened ticket just fails. If either fails, fetch the
+available transitions with `getTransitionsForJiraIssue` and use the one whose
+`to.id` is `10179` ("In Progress"). Never try transitions to find out which works.
 
 ### Step 4 — Gather codebase context
 
@@ -178,6 +195,6 @@ Processed N ticket(s):
 2. **Be specific in plans.** Name exact files, functions, and line ranges — not "update the service."
 3. **Respect tenant isolation.** All new code must work in tenant-isolated mode (per CLAUDE.md).
 4. **Don't implement.** This routine plans only — no code changes, no branch creation.
-5. **Don't move to Done.** Only move from To Do → In Progress. The human decides when work is Done.
+5. **Don't move to Done.** Only move To Do → In Progress (333) or Reopen → In Progress (353). The human decides when work is Done.
 6. **One ticket at a time.** Fully process each ticket before moving to the next.
 7. **If a ticket references attachments/images you can't read**, add a DECISIONS NEEDED item asking the human to describe them.

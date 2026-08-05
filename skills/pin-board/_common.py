@@ -11,8 +11,12 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 
-DEFAULT_DIR = os.environ.get(
-    "PIQK_PIN_BOARD_DIR", "/Users/nadav.barmatz/work/piqk/.pin-board"
+_CANDIDATE_DIRS = (
+    os.path.join(os.getcwd(), ".pin-board"),
+    os.path.expanduser("~/Code/.pin-board"),
+)
+DEFAULT_DIR = os.environ.get("PIN_BOARD_DIR") or next(
+    (c for c in _CANDIDATE_DIRS if os.path.isdir(c)), _CANDIDATE_DIRS[0]
 )
 
 MARK = {"planned": "○", "in_progress": "◐", "blocked": "⊘",
