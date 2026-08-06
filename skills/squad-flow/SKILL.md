@@ -9,7 +9,7 @@ description: >-
   "run these in parallel as sessions", "orchestrate this across sessions", "spin a session per
   ticket". Project-agnostic: reads project specifics (repos, dev env, deploy, tracker) from the
   project's own CLAUDE.md / skills — do NOT hardcode them here. Requires a herdr-managed terminal
-  (HERDR_ENV=1). Optional but recommended: the `hunk` CLI for changeset review.
+  (HERDR_ENV=1). Optional but recommended: the `tuicr` review tool (see the `tuicr` skill) as the human review surface.
 ---
 
 # squad-flow — parallel delegated development, one human-facing conductor
@@ -93,7 +93,7 @@ herdr = the long-lived sessions you want eyes on. They compose; neither replaces
 6. **Verify + Review + Integrate** — **pipeline, don't barrier.** Process each worker the moment IT
    reaches a terminal state, not when the whole wave settles (see `scripts/bus-waiter.py` + Hard
    Rule #6). Per ticket, before merge: (a) **Reviewer** agent reviews the diff (independent) →
-   blocking findings; (b) **hunk** review surface for the human on diffs that matter; (c) **Verifier**
+   blocking findings; (b) **tuicr** review surface for the human on diffs that matter; (c) **Verifier**
    runs e2e/tests; (d) **Integrator** merges local-then-push, sequenced to avoid shared-file races.
    Verify against ground truth (Hard Rule #4). Commit each pin cwd-safe (`scripts/commit-pin.sh`).
 7. **Bookkeep + Cleanup** — tracker transitions + worklogs (ask the human for values; don't invent).
@@ -223,20 +223,23 @@ findings, never routes fixes — it gates ONLY on the outcome ("QA-approved") vi
   agent) even though the worker launches it. QA is a **subagent of the worker, NOT a separate herdr
   session** — two herdr sessions can't talk directly, so this keeps the loop self-contained and the
   orchestrator OUT of it.
-- **Layer 2 — `hunk` (human surface, risk-gated):** for diffs that matter (auth, money, schema,
-  migrations) the human reviews in Hunk while the reviewer agent posts inline findings:
+- **Layer 2 — `tuicr` (human surface, risk-gated):** for diffs that matter (auth, money, schema,
+  migrations) the human reviews in tuicr while the reviewer agent posts findings. See the `tuicr`
+  skill for the full workflow (session discovery, wrappers, comment types).
   ```bash
-  # Human launches the TUI on the changeset (a herdr pane can launch it):
-  hunk diff main...feature/<ticket> --agent-context <rationale.json>
-  # Reviewer AGENT annotates the LIVE session (do NOT run `hunk diff` as the agent):
-  hunk session list
-  hunk session review  --repo <worktree> --json          # inspect files/hunks
-  hunk session comment apply   # batch inline notes via stdin
+  # Human opens the tuicr review on the changeset (a herdr pane can launch it — see the tuicr skill).
+  # Reviewer AGENT attaches to the LIVE session (do NOT open the TUI as the agent):
+  tuicr review list --repo <worktree>                        # find the active session slug
+  tuicr review comments --repo <worktree> --session <slug>   # read the human's comments
+  tuicr review add --repo <worktree> --session <slug> \
+    --username "<reviewer>" --type issue "<finding>"         # post findings (--input for batch)
   ```
-  Topology: Layer 1 reads `git diff` directly (needs NO hunk) and runs on EVERY diff. hunk is ONE
-  transient session on the diff currently under review (relaunch or `hunk session reload` per
-  ticket) — NEVER one-per-worker-tab. Skip hunk entirely for diffs the human won't eyeball; the
-  reviewer agent still covers them. hunk is an optional enhancement, not a dependency — the flow
+  The reviewer agent can also post the change rationale up front as a review-level `note`
+  (`tuicr review add … --type note`) so the human reviews with the "why" in view.
+  Topology: Layer 1 reads `git diff` directly (needs NO tuicr) and runs on EVERY diff. tuicr is ONE
+  session on the diff currently under review (one `--session <slug>` per ticket — local or PR) —
+  NEVER one-per-worker-tab. Skip tuicr entirely for diffs the human won't eyeball; the reviewer
+  agent still covers them. tuicr is the human review surface, not a hard dependency — the flow
   works without it (reviewer agent + raw diff).
   Don't make the human review all N diffs — Layer 1 is the always-on net; Layer 2 is where the
   human engages with the *important* diffs at their own pace (this is the real fix for "the human
