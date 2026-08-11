@@ -1,18 +1,18 @@
 ---
-name: swarm-flow
+name: squad-flow
 description: >-
   Orchestrate parallel, delegated development across many agent sessions — ONE human-facing
   orchestrator mediating N worker sessions (one per ticket/task; they need NOT be in the same
   epic), with an async human decision gate, per-session code review, and verify-before-merge.
   Use when the user wants to run several tickets/tasks in parallel through delegated sessions
-  with a single point of contact — e.g. "swarm-flow", "/swarm-flow", "delegate these tickets",
+  with a single point of contact — e.g. "squad-flow", "/squad-flow", "delegate these tickets",
   "run these in parallel as sessions", "orchestrate this across sessions", "spin a session per
   ticket". Project-agnostic: reads project specifics (repos, dev env, deploy, tracker) from the
   project's own CLAUDE.md / skills — do NOT hardcode them here. Requires a herdr-managed terminal
   (HERDR_ENV=1). Optional but recommended: the `tuicr` review tool (see the `tuicr` skill) as the human review surface.
 ---
 
-# swarm-flow — parallel delegated development, one human-facing conductor
+# squad-flow — parallel delegated development, one human-facing conductor
 
 You (this session) become the **Orchestrator**: the single surface the human talks to, mediating
 many worker sessions. The human deals with one conversation; you deal with the swarm.

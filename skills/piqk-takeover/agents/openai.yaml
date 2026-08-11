@@ -1,4 +1,0 @@
-interface:
-  display_name: "Piqk Takeover"
-  short_description: "Recover and take over interrupted Piqk work"
-  default_prompt: "Use $piqk-takeover to recover the current Piqk task from transcripts, worktrees, and pin-board state."

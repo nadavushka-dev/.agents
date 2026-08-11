@@ -6,7 +6,7 @@ description: Run a retrospective on the PIN-BOARD SYSTEM ITSELF (schema, tooling
 # Pin-board Retro (system improvement)
 
 A recurring retrospective whose subject is the **pin-board system**: its schema
-(`.pin-board/README.md`), its tooling (`~/.claude/skills/pin-board/`:
+(`.pin-board/README.md`), its tooling (the pin-board skill directory:
 `render.py`, `pinboard.py`, `_common.py`), and the conventions around it. The
 goal is to make the board serve the work better over time — not to groom
 individual tasks (that's just `render.py`/`pinboard.py gc`).
@@ -16,14 +16,16 @@ are captured as `DEC-pinboard-<slug>` pins (with a `due` if time-boxed) so the
 board tracks its own evolution. Continuity across runs lives in a single
 `DEC-pinboard-retro-log` pin.
 
+**pin-board is a prerequisite.** If the pin-board tooling/skill is not installed or no `.pin-board` dir is resolvable, there is nothing to retro — tell the user and stop. Otherwise proceed.
+
 Paths:
-- Board dir: `/Users/nadav.barmatz/work/piqk/.pin-board/`
+- Board dir: resolved by the pin-board tooling itself (`PIN_BOARD_DIR` env → `<cwd>/.pin-board` → `~/Code/.pin-board`)
 - Tooling: `~/.claude/skills/pin-board/{render.py,pinboard.py,_common.py}`, `SKILL.md`
 
 ## 1. Open the retro — read continuity
 
 ```bash
-cat /Users/nadav.barmatz/work/piqk/.pin-board/DEC-pinboard-retro-log.json 2>/dev/null
+cat <pinBoardDir>/DEC-pinboard-retro-log.json 2>/dev/null
 python3 ~/.claude/skills/pin-board/render.py --type decision | grep -i pinboard
 ```
 
@@ -51,7 +53,8 @@ Then look for friction patterns:
 - **CLI gaps** — operations done by hand because `pinboard.py` lacks a verb
   (e.g. item creation, bulk status, reparenting).
 - **(optional, heavier)** scan recent transcripts under
-  `~/.claude/projects/-Users-nadav-barmatz-work-piqk/*.jsonl` for "I had to
+  `~/.claude/projects/<escaped-project-path>/*.jsonl` (the escaped dir is the
+  project's absolute path with `/` replaced by `-`) for "I had to
   hand-edit" / "the board didn't capture" moments. Only if the above is thin.
 
 ## 3. Synthesize candidate improvements
@@ -92,8 +95,7 @@ python3 ~/.claude/skills/pin-board/pinboard.py lint    # must be clean (exit 0)
 ```
 
 If any tooling changed, sanity-check `render.py` still renders. If a plan-sized
-change was adopted, also drop a canonical copy under `PLANS/infra/` per the
-PERSONAL_HARD_RULES.
+change was adopted, also record it wherever the project keeps its plans/docs.
 
 ## Cadence
 
