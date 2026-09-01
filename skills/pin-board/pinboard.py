@@ -3,6 +3,7 @@
 
 Usage:
   pinboard.py lint   [--dir PATH] [--stale-days N]
+  pinboard.py board  [--dir PATH] [--ticket T]
   pinboard.py gc     [--dir PATH] [--execute]
   pinboard.py set    <id> <field> <value> [--dir PATH] [--by WHO]
   pinboard.py link   <id> <rel> <target>  [--dir PATH] [--by WHO]
@@ -21,7 +22,7 @@ import os
 import sys
 
 from _common import (
-    DEFAULT_DIR, PRUNABLE, STATUS, TYPE, REL, REQUIRED, ARCHIVE_SUBDIR,
+    DEFAULT_DIR, MARK, PRUNABLE, STATUS, TYPE, REL, REQUIRED, ARCHIVE_SUBDIR,
     load, parse_iso, iso_now, write_item, item_path, archive_item,
 )
 
@@ -162,6 +163,91 @@ def cmd_lint(a):
     return 1 if errors else 0
 
 
+# ── board (blocked / ready) ──────────────────────────────────────────────────
+
+# Only these are grabbable work units; decision/tech-debt/shortcut are rationale.
+WORK = {"task", "subtask"}
+
+
+def _blockers_index(items):
+    """Inverse of the forward `blocks` rel → {target_id: [blocker_id, ...]}.
+
+    'X blocks Y' is the link {rel:"blocks", id:"Y"} living on X, so Y waits on X.
+    There is deliberately no `blockedBy` rel — the edge is always written on the
+    predecessor. Non-`blocks` rels (relatedTo/supersedes/typos) are ignored here.
+    """
+    idx = {}
+    for it in items.values():
+        for l in it.get("links", []) or []:
+            if l.get("rel") == "blocks" and l.get("id"):
+                idx.setdefault(l["id"], []).append(it["id"])
+    return idx
+
+
+def cmd_board(a):
+    items = load(a.dir)                      # full board — blocker status needs it
+    blockers = _blockers_index(items)
+
+    def in_scope(it):
+        if not a.ticket:
+            return True
+        return (it.get("ticket") == a.ticket or it.get("id") == a.ticket
+                or it.get("parent") == a.ticket)
+
+    def active_blockers(iid):
+        # A blocker still blocks until it's done. A blocker id absent from the
+        # live board is treated as resolved (archived == done; a true dangle is a
+        # lint error, surfaced there — not here).
+        out = []
+        for b in blockers.get(iid, []):
+            bl = items.get(b)
+            if bl is not None and bl.get("status") != "done":
+                out.append(bl)
+        return out
+
+    blocked, ready, mism = [], [], []
+    for it in items.values():
+        if it.get("type") not in WORK or not in_scope(it):
+            continue
+        if it.get("status") in ("done", "postponed"):
+            continue
+        act = active_blockers(it["id"])
+        st = it.get("status")
+        if act or st == "blocked":
+            blocked.append((it, act))
+            if act and st != "blocked":
+                mism.append(f"{it['id']}: has unfinished blocker(s) but status='{st}' (should be 'blocked')")
+            if not act and st == "blocked":
+                mism.append(f"{it['id']}: status='blocked' but no unfinished blocker → grabbable, flip to 'planned'")
+        else:
+            ready.append(it)
+
+    hdr = "PIN BOARD — blocked / ready" + (f"  (ticket {a.ticket})" if a.ticket else "")
+    print(hdr)
+    print("=" * max(len(hdr), 60))
+
+    print(f"\n⊘ BLOCKED ({len(blocked)}) — waiting on an unfinished blocker")
+    print("-" * 60)
+    for it, act in sorted(blocked, key=lambda r: r[0]["id"]):
+        waiting = ", ".join(f"{b['id']}({b.get('status')})" for b in act) or "status=blocked, no live blocker"
+        print(f"  {it['id']:<24} {it.get('status',''):<11} {it.get('title','')}")
+        print(f"      ⤷ waiting on: {waiting}")
+
+    print(f"\n○ READY ({len(ready)}) — grabbable now, no unfinished blocker")
+    print("-" * 60)
+    for it in sorted(ready, key=lambda x: (x.get("status") != "in_progress", x["id"])):
+        print(f"  {MARK.get(it.get('status'),'?')} {it['id']:<24} {it.get('status',''):<11} {it.get('title','')}")
+
+    if mism:
+        print(f"\n⚠ STATUS/EDGE MISMATCH ({len(mism)}) — fix so the board reads true")
+        print("-" * 60)
+        for m in mism:
+            print(f"  {m}")
+
+    print("\n(only 'blocks' edges count; run `pinboard lint` for malformed rels)")
+    return 0
+
+
 # ── gc ───────────────────────────────────────────────────────────────────────
 
 def cmd_gc(a):
@@ -269,6 +355,11 @@ def main():
     p.add_argument("--dir", default=DEFAULT_DIR)
     p.add_argument("--stale-days", type=int, default=14)
     p.set_defaults(fn=cmd_lint)
+
+    p = sub.add_parser("board", help="blocked / ready report (grabbable vs waiting on a blocker)")
+    p.add_argument("--dir", default=DEFAULT_DIR)
+    p.add_argument("--ticket", help="scope to one ticket (matches ticket field, id, or parent)")
+    p.set_defaults(fn=cmd_board)
 
     p = sub.add_parser("gc", help="archive fully-done task subtrees → archive/ (dry-run unless --execute)")
     p.add_argument("--dir", default=DEFAULT_DIR)

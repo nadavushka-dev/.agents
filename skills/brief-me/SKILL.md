@@ -1,5 +1,5 @@
 ---
-name: i-am-lost
+name: brief-me
 description: Quick context recap for when the user returns to a session after a break. Summarizes the mission, current status, and any pending question or decision in a few lines.
 ---
 

@@ -34,6 +34,8 @@ drift hand-editing causes (dangling links, orphaned parents, bad enums).
 ```bash
 python3 ~/.claude/skills/pin-board/pinboard.py lint              # integrity report; exit 1 on errors
 python3 ~/.claude/skills/pin-board/pinboard.py lint --stale-days 7
+python3 ~/.claude/skills/pin-board/pinboard.py board             # what's BLOCKED vs grabbable READY (+ status/edge mismatches)
+python3 ~/.claude/skills/pin-board/pinboard.py board --ticket RND-2264
 python3 ~/.claude/skills/pin-board/pinboard.py gc                # dry-run: list fully-done task subtrees
 python3 ~/.claude/skills/pin-board/pinboard.py gc --execute      # ARCHIVE them → archive/ (never decisions/tech-debt)
 python3 ~/.claude/skills/pin-board/pinboard.py set <id> status done --by <who>
@@ -45,6 +47,11 @@ python3 ~/.claude/skills/pin-board/pinboard.py unlink <id> relatedTo <other-id>
 - `lint` — ERRORS (id≠filename, bad type/status/rel enum, missing field, unparseable
   date, dangling link, orphaned/circular parent) · WARNINGS (past-due not-done,
   stale `in_progress`) · INFO (gc candidates, resolved decisions to drop).
+- `board` — dependency view over the `blocks` edges: **BLOCKED** work items (each with
+  the unfinished blocker + its status) vs **READY** (grabbable now, no unfinished
+  blocker), plus **MISMATCH** hints (a `blocks` edge with no `status:blocked`, or a
+  `blocked` pin with no live blocker). The edge is always **predecessor `blocks`
+  successor** — there is no `blockedBy` rel. `--ticket` scopes to one ticket's subtree.
 - `gc` — **archives** (moves to `archive/`) only `epic`/`task`/`subtask` whose whole subtree
   is `done`; **never** `decision`/`tech-debt`/`shortcut` (lists those as manual-drop candidates).
   Archived pins stay recoverable under `<dir>/archive/` and are excluded from the live board /

@@ -6,9 +6,9 @@
       "sourceType": "github",
       "sourceUrl": "https://github.com/vercel-labs/skills.git",
       "skillPath": "skills/find-skills/SKILL.md",
-      "skillFolderHash": "3013fdeb8a11b10b1eb795ec3ae8bfca38f7c26d",
+      "skillFolderHash": "76a98a285cb0434f3d39e1a873823556330e398b",
       "installedAt": "2026-06-14T14:30:36.852Z",
-      "updatedAt": "2026-06-14T14:30:36.852Z"
+      "updatedAt": "2026-08-31T10:49:53.397Z"
     },
     "figma-implement-design": {
       "source": "openai/skills",
@@ -37,6 +37,33 @@
       "skillFolderHash": "48d58648aefcc59964a99be9c23778fe69346663",
       "installedAt": "2026-07-02T06:41:28.463Z",
       "updatedAt": "2026-07-02T06:41:28.463Z"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel-labs/agent-skills.git",
+      "skillPath": "skills/web-design-guidelines/SKILL.md",
+      "skillFolderHash": "3116f3e62dbd02b44a598b1aa690d2a8938e8f89",
+      "installedAt": "2026-08-31T11:02:35.740Z",
+      "updatedAt": "2026-08-31T11:02:35.740Z"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/pbakaus/impeccable.git",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "skillFolderHash": "d566fb4a1062fec66eb6ac68b6a29248b75bf34d",
+      "installedAt": "2026-08-31T11:03:53.297Z",
+      "updatedAt": "2026-08-31T11:03:53.297Z"
+    },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git",
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "skillFolderHash": "5cca2c41be4f7a85c3d8ff95e9bd42de9486745e",
+      "installedAt": "2026-08-31T11:04:03.618Z",
+      "updatedAt": "2026-08-31T11:04:03.618Z"
     }
   },
   "dismissed": {
